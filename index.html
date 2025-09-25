@@ -3,520 +3,568 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengaduan Siswa - SMAN 1 Dramaga</title>
+    <title>Aplikasi Pengaduan Siswa</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Poppins', sans-serif;
-            transition: background-color 0.5s ease;
+            font-family: 'Inter', sans-serif;
         }
-        .notification, .welcome-overlay {
-            transition: opacity 0.5s, transform 0.5s, visibility 0.5s;
+        .chart-container {
+            position: relative;
+            height: 40vh;
+            width: 80vw;
+            max-width: 600px;
         }
-        .login-background {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1577063142275-2f474b438283?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
+        .page {
+            display: none;
+            animation: fadeIn 0.5s;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .login-animation { animation: fadeIn 0.5s ease-out forwards; }
-        .login-animation > * { opacity: 0; animation: fadeInUp 0.6s ease-out forwards; }
-        .login-animation img { animation-delay: 0s; } .login-animation h1 { animation-delay: 0.1s; } .login-animation p { animation-delay: 0.2s; } .login-animation form { animation-delay: 0.3s; } .login-animation .text-xs { animation-delay: 0.4s; }
-
-        @keyframes welcomeText {
-            0% { opacity: 0; transform: translateY(30px) scale(0.9); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
+        .page.active {
+            display: block;
         }
-        .welcome-animation h1 {
-            animation: welcomeText 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .dynamic-header, .dynamic-title-color {
-            transition: background-color 0.5s ease, color 0.5s ease;
+        .toast {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            transition: bottom 0.5s ease-in-out;
+            z-index: 1000;
         }
-        .complaint-card {
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        .toast.show {
+            bottom: 30px;
         }
-        .complaint-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-        }
+        .toast.success { background-color: #22c55e; }
+        .toast.error { background-color: #ef4444; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-
-    <!-- Welcome Overlay -->
-    <div id="welcomeOverlay" class="welcome-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center">
-        <div class="text-center text-white welcome-animation">
-            <h1 class="text-4xl md:text-6xl font-bold opacity-0">Selamat Datang</h1>
-            <p class="text-lg md:text-2xl mt-4 opacity-0" style="animation: fadeInUp 0.7s ease-out 0.5s forwards;">di Portal Pengaduan Siswa</p>
-        </div>
-    </div>
+<body class="bg-slate-900 text-slate-200">
 
     <div id="app" class="max-w-4xl mx-auto p-4 md:p-6">
 
-        <!-- Halaman Login -->
-        <div id="loginPage" class="p-8 rounded-xl max-w-md mx-auto mt-10">
-            <div class="bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-2xl login-animation">
-                <img src="https://sman1dramaga.sch.id/wp-content/uploads/2022/02/logo-sman-1-dramaga.png" alt="Logo SMAN 1 Dramaga" class="w-24 h-24 mx-auto mb-4" onerror="this.style.display='none'">
-                <h1 class="text-3xl font-bold text-center text-blue-600 mb-2">Portal Pengaduan Siswa</h1>
-                <p class="text-center text-gray-500 mb-8">SMAN 1 Dramaga</p>
-                <form id="loginForm">
-                    <div class="mb-5">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Masuk sebagai:</label>
-                        <div class="flex justify-around items-center bg-gray-100 p-1 rounded-lg">
-                            <label class="w-full text-center"><input type="radio" name="role" value="siswa" class="sr-only peer" checked><div class="cursor-pointer py-2 px-4 rounded-md text-gray-600 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-md transition-all duration-300">Siswa</div></label>
-                            <label class="w-full text-center"><input type="radio" name="role" value="admin" class="sr-only peer"><div class="cursor-pointer py-2 px-4 rounded-md text-gray-600 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-md transition-all duration-300">Admin</div></label>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">NIS / Username</label>
-                        <input type="text" id="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Masukkan NIS atau 'admin'" required>
-                    </div>
-                    <div id="loginClassContainer" class="mb-4">
-                        <label for="loginClass" class="block text-sm font-medium text-gray-700 mb-2">Kelas</label>
-                        <select id="loginClass" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"><option value="">Pilih Kelas</option></select>
-                    </div>
-                    <div class="mb-6">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                        <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Password apapun" required>
-                    </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300">Login</button>
-                </form>
-                <p class="text-xs text-center text-gray-400 mt-4">Demo: Pilih peran, gunakan 'admin' untuk admin, atau username lain untuk siswa.</p>
-            </div>
-        </div>
-
-        <!-- Dashboard Siswa -->
-        <div id="studentDashboard" class="hidden">
-            <header class="dynamic-header flex justify-between items-center bg-white p-4 rounded-xl shadow-md mb-6">
-                <div class="flex items-center space-x-4">
-                    <img src="https://sman1dramaga.sch.id/wp-content/uploads/2022/02/logo-sman-1-dramaga.png" alt="Logo SMAN 1 Dramaga" class="w-10 h-10" onerror="this.style.display='none'">
-                    <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl"><span id="studentInitial">S</span></div>
-                    <div><h1 class="dynamic-title-color text-2xl font-bold text-blue-600">Dashboard Siswa</h1><p class="text-gray-600">Selamat datang, <span id="studentName" class="font-semibold"></span>!</p></div>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <button id="settingsBtnStudent" class="text-gray-500 hover:text-blue-600" title="Ganti Background"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
-                    <button id="logoutBtnStudent" class="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300">Logout</button>
-                </div>
-            </header>
-            <main><div class="flex justify-end mb-4"><button id="newComplaintBtn" class="bg-green-500 text-white py-2 px-5 rounded-lg hover:bg-green-600 transition duration-300 font-semibold">Buat Laporan Baru</button></div><div class="dynamic-header bg-white p-6 rounded-xl shadow-md"><h2 class="text-xl font-semibold mb-4 border-b pb-2">Riwayat Pengaduan Anda</h2><div id="studentComplaintsList" class="space-y-4"></div></div></main>
-        </div>
-
-        <!-- Dashboard Admin -->
-        <div id="adminDashboard" class="hidden">
-             <header class="dynamic-header flex justify-between items-center bg-white p-4 rounded-xl shadow-md mb-6">
-                 <div class="flex items-center space-x-4">
-                    <img src="https://sman1dramaga.sch.id/wp-content/uploads/2022/02/logo-sman-1-dramaga.png" alt="Logo SMAN 1 Dramaga" class="w-10 h-10" onerror="this.style.display='none'">
-                    <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl"><span>A</span></div>
-                    <div><h1 class="dynamic-title-color text-2xl font-bold text-blue-600">Dashboard Admin</h1><p class="text-gray-600">Selamat datang, Admin!</p></div>
-                 </div>
-                <div class="flex items-center space-x-3">
-                     <button id="settingsBtnAdmin" class="text-gray-500 hover:text-blue-600" title="Ganti Background"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
-                    <button id="logoutBtnAdmin" class="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300">Logout</button>
-                </div>
-            </header>
-            <main>
-                <div class="dynamic-header bg-white p-6 rounded-xl shadow-md mb-6">
-                    <h2 class="text-xl font-semibold mb-4 border-b pb-2">Pengaduan Perlu Tindakan</h2>
-                    <div id="adminInProgressList" class="space-y-4"></div>
-                </div>
-                <div class="dynamic-header bg-white p-6 rounded-xl shadow-md">
-                    <h2 class="text-xl font-semibold mb-4 border-b pb-2">Pengaduan Selesai</h2>
-                    <div id="adminCompletedList" class="space-y-4"></div>
-                </div>
-            </main>
-        </div>
-        
-        <!-- Form Pengaduan -->
-        <div id="complaintFormPage" class="hidden">
-             <header class="dynamic-header flex justify-between items-center bg-white p-4 rounded-xl shadow-md mb-6"><h1 class="dynamic-title-color text-2xl font-bold text-blue-600">Formulir Pengaduan</h1><button id="backToStudentDashboard" class="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300">Kembali</button></header>
-            <div class="dynamic-header bg-white p-8 rounded-xl shadow-lg">
-                <form id="complaintForm">
-                    <div class="grid md:grid-cols-2 gap-4 mb-4">
-                        <div><label for="fullName" class="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label><input type="text" id="fullName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Masukkan nama lengkap Anda" required></div>
-                        <div><label for="studentClass" class="block text-sm font-medium text-gray-700 mb-2">Kelas</label><select id="studentClass" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required><option value="">Pilih Kelas Anda</option></select></div>
-                    </div>
-                    <div class="mb-4"><label for="complaintTitle" class="block text-sm font-medium text-gray-700 mb-2">Judul Laporan</label><input type="text" id="complaintTitle" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Contoh: Keran air di toilet lantai 2 rusak" required></div>
-                    <div class="mb-4"><label for="complaintBody" class="block text-sm font-medium text-gray-700 mb-2">Isi Laporan</label><textarea id="complaintBody" rows="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Jelaskan detail masalah yang Anda temukan..." required></textarea></div>
-                    <div class="mb-6"><label class="flex items-center"><input type="checkbox" id="isAnonymous" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"><span class="ml-2 text-sm text-gray-600">Kirim sebagai Anonim (identitas Anda tidak akan ditampilkan)</span></label></div>
-                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300">Kirim Laporan</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- HALAMAN DETAIL & CHAT PENGADUAN -->
-        <div id="complaintDetailPage" class="hidden">
-            <header class="dynamic-header flex justify-between items-center bg-white p-4 rounded-xl shadow-md mb-6">
-                <h1 id="detailTitle" class="dynamic-title-color text-2xl font-bold text-blue-600 truncate">Detail Laporan</h1>
-                <div class="flex items-center space-x-2">
-                    <button id="markAsCompleteBtn" class="hidden bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition duration-300">Tandai Selesai</button>
-                    <button id="backToDashboard" class="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-300">Kembali</button>
-                </div>
-            </header>
-            <main class="dynamic-header bg-white p-6 rounded-xl shadow-md">
-                <div class="border-b pb-4 mb-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <h2 id="detailSubTitle" class="text-xl font-semibold">Judul Laporan</h2>
-                        <div id="detailStatusBadge"></div>
-                    </div>
-                    <p class="text-sm text-gray-500">Pelapor: <span id="detailReporter" class="font-medium"></span> | Tanggal: <span id="detailDate"></span></p>
-                    <p id="detailBody" class="mt-2"></p>
-                </div>
+        <!-- Header -->
+        <header id="app-header" class="bg-slate-800 shadow-md rounded-xl p-6 mb-6 hidden">
+            <div class="flex justify-between items-center">
                 <div>
-                    <h3 class="font-semibold mb-3">Diskusi Laporan</h3>
-                    <div id="messagesContainer" class="h-64 overflow-y-auto bg-gray-50 p-3 rounded-lg space-y-4 mb-4 border"></div>
-                    <form id="messageForm">
-                        <div class="flex items-center">
-                            <input type="text" id="messageInput" placeholder="Tulis balasan..." class="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-blue-500 focus:border-blue-500" required>
-                            <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded-r-lg hover:bg-blue-700 transition duration-300">Kirim</button>
+                    <h1 class="text-2xl md:text-3xl font-bold text-white">Aplikasi Pengaduan Siswa</h1>
+                    <p id="welcome-message" class="text-sm text-slate-400 mt-1"></p>
+                </div>
+                <div class="flex items-center space-x-4">
+                     <button id="pengaturan-btn" title="Pengaturan" onclick="showPage('pengaturan')" class="p-2 rounded-full text-slate-300 hover:bg-slate-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    <button onclick="logout()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Keluar</span>
+                    </button>
+                </div>
+            </div>
+             <nav id="app-nav" class="mt-4 border-t border-slate-700 pt-4">
+                <!-- Navigasi dinamis -->
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Login Page -->
+            <div id="login" class="page active">
+                 <div class="bg-slate-800 p-8 rounded-xl shadow-lg max-w-md mx-auto mt-16 animate-fadeIn">
+                    <h2 class="text-2xl font-bold mb-2 text-center text-white">Selamat Datang</h2>
+                    <p class="text-slate-400 mb-6 text-center">Silakan masuk untuk melanjutkan.</p>
+                    <form id="login-form" onsubmit="handleLogin(event)">
+                        <div class="mb-4">
+                            <label for="user-id" class="block text-sm font-medium text-slate-300">NIS / ID Admin</label>
+                            <input type="text" id="user-id" class="mt-1 block w-full p-3 bg-slate-700 border border-slate-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div class="mb-6">
+                            <label for="password" class="block text-sm font-medium text-slate-300">Password</label>
+                            <input type="password" id="password" class="mt-1 block w-full p-3 bg-slate-700 border border-slate-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <p id="login-error" class="text-red-500 text-sm text-center mb-4 hidden"></p>
+                        <button type="submit" class="w-full px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105">Masuk</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Beranda Siswa Page -->
+            <div id="beranda-siswa" class="page">
+                <div class="text-center mb-8">
+                    <h2 class="text-xl font-semibold mb-2 text-white">Buat Laporan Baru</h2>
+                    <p class="text-slate-400">Pilih kategori untuk memulai pengaduan Anda.</p>
+                </div>
+                <div id="category-buttons" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+                    <!-- Tombol kategori akan di-generate oleh JS -->
+                </div>
+            </div>
+
+            <!-- Admin Dashboard Page -->
+            <div id="admin-dashboard" class="page">
+                 <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-white">Dasbor Admin</h2>
+                    <!-- Stats -->
+                    <div id="admin-stats" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <!-- Statistik di-generate oleh JS -->
+                    </div>
+                    <!-- Filters -->
+                    <div class="flex flex-col md:flex-row gap-4 mb-6 p-4 bg-slate-900/50 rounded-lg">
+                        <input type="text" id="search-input" onkeyup="renderAdminDashboard()" placeholder="Cari laporan..." class="w-full md:w-1/2 p-2 bg-slate-700 border border-slate-600 rounded-md">
+                        <select id="filter-category" onchange="renderAdminDashboard()" class="w-full md:w-1/4 p-2 bg-slate-700 border border-slate-600 rounded-md"></select>
+                        <select id="filter-status" onchange="renderAdminDashboard()" class="w-full md:w-1/4 p-2 bg-slate-700 border border-slate-600 rounded-md">
+                             <option value="">Semua Status</option>
+                             <option value="Diterima">Diterima</option>
+                             <option value="Diproses">Diproses</option>
+                             <option value="Selesai">Selesai</option>
+                        </select>
+                    </div>
+                    <div id="admin-history-list" class="space-y-6"></div>
+                 </div>
+            </div>
+
+            <!-- Other pages remain the same structure -->
+            <div id="grafik" class="page">
+                 <div class="bg-slate-800 p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 text-center text-white">Grafik Jumlah Kasus per Kategori</h3>
+                    <div class="chart-container mx-auto">
+                        <canvas id="complaintChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div id="form-laporan" class="page">
+                <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold mb-1 text-white">Buat Laporan Baru</h2>
+                    <p class="text-slate-400 mb-6">Kategori: <span id="form-category-title" class="font-semibold"></span></p>
+                    <form id="complaint-form" onsubmit="submitComplaint(event)">
+                        <input type="hidden" id="category-input">
+                        <div class="mb-4">
+                            <label for="masalah" class="block text-sm font-medium text-slate-300 mb-1">Jelaskan Laporan Masalah Anda</label>
+                            <textarea id="masalah" rows="6" class="w-full p-3 bg-slate-700 border border-slate-600 text-white rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Tuliskan detail masalah yang Anda hadapi..." required></textarea>
+                        </div>
+                        <div class="mb-4">
+                             <label for="attachment" class="block text-sm font-medium text-slate-300 mb-1">Lampirkan Bukti (Opsional)</label>
+                             <input type="file" id="attachment" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-500/10 file:text-blue-300 hover:file:bg-blue-500/20">
+                        </div>
+                        <div class="mb-6">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="anonim" class="h-4 w-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-slate-300">Kirim sebagai Anonim</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-end space-x-4">
+                            <button type="button" onclick="showPage(currentUser.role === 'siswa' ? 'beranda-siswa' : 'admin-dashboard')" class="px-6 py-2 text-sm font-medium text-slate-200 bg-slate-600 rounded-lg hover:bg-slate-500 transition-colors">Batal</button>
+                            <button type="submit" class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Kirim Laporan</button>
                         </div>
                     </form>
-                    <div id="closedMessage" class="hidden text-center text-gray-500 mt-4 p-4 bg-gray-100 rounded-lg">Laporan ini telah ditutup.</div>
                 </div>
-            </main>
-        </div>
-
+            </div>
+            <div id="riwayat-siswa" class="page">
+                 <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-white">Riwayat Laporan Anda</h2>
+                    <div id="history-list" class="space-y-4"></div>
+                 </div>
+            </div>
+            <div id="pengaturan" class="page">
+                <div class="bg-slate-800 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-white">Pengaturan Profil</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="nama-pengguna" class="block text-sm font-medium text-slate-300">Nama Pengguna</label>
+                            <input type="text" id="nama-pengguna" class="mt-1 block w-full p-2 bg-slate-700 border border-slate-600 text-white rounded-md" placeholder="Masukkan nama Anda">
+                        </div>
+                         <div class="flex items-center justify-end space-x-4 pt-4">
+                            <button onclick="saveProfile()" class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Simpan Perubahan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <div id="toast-container" class="toast"></div>
     </div>
 
-    <!-- Panel Ganti Background -->
-    <div id="backgroundChanger" class="hidden fixed bottom-5 left-5 bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-2xl border">
-        <p class="text-sm font-medium mb-3 text-center">Pilih Tema Warna</p>
-        <div class="grid grid-cols-5 gap-2">
-            <button data-color="#f3f4f6" data-header="#ffffff" data-title-color="#2563eb" class="h-8 w-8 rounded-full bg-gray-100 border-2 border-gray-300" title="Default"></button>
-            <button data-color="#e0f2fe" data-header="#bae6fd" data-title-color="#0284c7" class="h-8 w-8 rounded-full bg-sky-100 border-2 border-sky-300" title="Biru Langit"></button>
-            <button data-color="#dcfce7" data-header="#bbf7d0" data-title-color="#16a34a" class="h-8 w-8 rounded-full bg-green-100 border-2 border-green-300" title="Hijau Mint"></button>
-            <button data-color="#fef9c3" data-header="#fef08a" data-title-color="#ca8a04" class="h-8 w-8 rounded-full bg-yellow-100 border-2 border-yellow-300" title="Kuning Pucat"></button>
-            <button data-color="#ede9fe" data-header="#ddd6fe" data-title-color="#7c3aed" class="h-8 w-8 rounded-full bg-violet-100 border-2 border-violet-300" title="Lavender"></button>
-            <button data-color="#fce7f3" data-header="#fbcfe8" data-title-color="#db2777" class="h-8 w-8 rounded-full bg-pink-100 border-2 border-pink-300" title="Merah Muda"></button>
-            <button data-color="#fee2e2" data-header="#fecaca" data-title-color="#dc2626" class="h-8 w-8 rounded-full bg-red-100 border-2 border-red-300" title="Pastel Merah"></button>
-            <button data-color="#ffedd5" data-header="#fed7aa" data-title-color="#f97316" class="h-8 w-8 rounded-full bg-orange-100 border-2 border-orange-300" title="Oren"></button>
-            <button data-color="#dbeafe" data-header="#bfdbfe" data-title-color="#3b82f6" class="h-8 w-8 rounded-full bg-blue-100 border-2 border-blue-300" title="Biru Muda"></button>
-            <button data-color="#e0e7ff" data-header="#c7d2fe" data-title-color="#4f46e5" class="h-8 w-8 rounded-full bg-indigo-100 border-2 border-indigo-300" title="Indigo"></button>
-            <button data-color="#d1fae5" data-header="#a7f3d0" data-title-color="#059669" class="h-8 w-8 rounded-full bg-emerald-100 border-2 border-emerald-300" title="Zamrud"></button>
-            <button data-color="#f0fdfa" data-header="#ccfbf1" data-title-color="#0d9488" class="h-8 w-8 rounded-full bg-teal-50 border-2 border-teal-200" title="Teal"></button>
-            <button data-color="#f5f5f4" data-header="#e7e5e4" data-title-color="#78716c" class="h-8 w-8 rounded-full bg-stone-100 border-2 border-stone-300" title="Batu"></button>
-            <button data-color="#fef2f2" data-header="#fee2e2" data-title-color="#ef4444" class="h-8 w-8 rounded-full bg-rose-50 border-2 border-rose-200" title="Mawar"></button>
-            <button data-color="#2d3748" data-header="#4a5568" data-title-color="#cbd5e1" class="h-8 w-8 rounded-full bg-gray-800 border-2 border-gray-500" title="Mode Gelap"></button>
-        </div>
-    </div>
-
-    <!-- Notifikasi -->
-    <div id="notification" class="notification fixed bottom-5 right-5 bg-green-500 text-white py-3 px-6 rounded-lg shadow-xl opacity-0 transform translate-y-10"><p id="notificationMessage"></p></div>
-
-    <script type="module">
-        // --- FIREBASE SDK IMPORTS ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        
-        // --- ELEMENTS & STATE --- (same as before)
-        const pages = {
-            login: document.getElementById('loginPage'), student: document.getElementById('studentDashboard'),
-            admin: document.getElementById('adminDashboard'), form: document.getElementById('complaintFormPage'),
-            detail: document.getElementById('complaintDetailPage'),
+    <script>
+        // --- DATABASE PENGGUNA (SIMULASI) ---
+        const users = {
+            students: [
+                { id: 'Nai', password: '12345', name: 'Naifah', role: 'siswa' },
+                { id: 'Raden', password: '354', name: 'M.Fikri', role: 'siswa' },
+                { id: 'Maira', password: '1122', name: 'Mairaa', role: 'siswa' },
+                { id: 'Aira', password: '1421', name: 'Aira', role: 'siswa' },
+                ],
+            admins: [
+                { id: 'walikelas', password: '123', name: 'Admin Sekolah', role: 'admin' },
+            ]
         };
-        const backgroundChanger = document.getElementById('backgroundChanger');
-        const body = document.body;
-        const welcomeOverlay = document.getElementById('welcomeOverlay');
-        const loginClassContainer = document.getElementById('loginClassContainer');
-        const loginForm = document.getElementById('loginForm');
-        const complaintForm = document.getElementById('complaintForm');
-        const messageForm = document.getElementById('messageForm');
-        const settingsBtnStudent = document.getElementById('settingsBtnStudent');
-        const settingsBtnAdmin = document.getElementById('settingsBtnAdmin');
-        const backToDashboardBtn = document.getElementById('backToDashboard');
-        const markAsCompleteBtn = document.getElementById('markAsCompleteBtn');
-        const studentName = document.getElementById('studentName');
-        const studentInitial = document.getElementById('studentInitial');
-        const studentComplaintsList = document.getElementById('studentComplaintsList');
-        const adminInProgressList = document.getElementById('adminInProgressList');
-        const adminCompletedList = document.getElementById('adminCompletedList');
-        const notification = document.getElementById('notification');
-        const notificationMessage = document.getElementById('notificationMessage');
-        const studentClassDropdown = document.getElementById('studentClass');
-        const loginClassDropdown = document.getElementById('loginClass');
-        const detailTitle = document.getElementById('detailTitle');
-        const detailSubTitle = document.getElementById('detailSubTitle');
-        const detailStatusBadge = document.getElementById('detailStatusBadge');
-        const detailReporter = document.getElementById('detailReporter');
-        const detailDate = document.getElementById('detailDate');
-        const detailBody = document.getElementById('detailBody');
-        const messagesContainer = document.getElementById('messagesContainer');
-        const messageInput = document.getElementById('messageInput');
-        const closedMessage = document.getElementById('closedMessage');
 
+        // --- STATE MANAGEMENT ---
+        let complaintChart;
         let currentUser = null;
-        let currentViewedComplaintId = null;
-        let complaints = []; // Data will now come from Firebase
-        let db;
-        let complaintsCollection;
-        
-        // --- FIREBASE SETUP ---
-        async function initializeFirebase() {
-            try {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                const auth = getAuth(app);
-                
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+        const categories = [
+            { name: 'Fasilitas', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>' },
+            { name: 'Pembelajaran', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v15H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>' },
+            { name: 'Lingkungan', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2,12.3l-5.7-5.7c-0.6-0.6-1.5-0.6-2.1,0L3.6,16.4c-0.5,0.5-0.6,1.3-0.3,2s1.1,1.1,1.9,0.8l4.8-1.8 c1.3-0.5,2.7,0.7,2.2,2l-1.8,4.8c-0.3,0.8,0.3,1.6,1.1,1.9c0.8,0.3,1.6-0.3,1.9-1.1l5.7-15.7C22.4,13.8,21.8,12.9,21.2,12.3z"></path></svg>' },
+            { name: 'Perilaku Guru', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' },
+            { name: 'Lainnya', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>' }
+        ];
 
-                complaintsCollection = collection(db, `/artifacts/${appId}/public/data/complaints`);
-                listenForComplaints();
-                console.log("Firebase initialized and listening for complaints.");
-            } catch (error) {
-                console.error("Firebase Initialization Error:", error);
-                showNotification("Gagal terhubung ke database.", false);
+        // --- UTILITY FUNCTIONS ---
+        const getStatusInfo = (status) => {
+            switch (status) {
+                case 'Diterima': return { text: 'Diterima', color: 'bg-blue-500/20 text-blue-300' };
+                case 'Diproses': return { text: 'Diproses', color: 'bg-yellow-500/20 text-yellow-300' };
+                case 'Selesai': return { text: 'Selesai', color: 'bg-green-500/20 text-green-300' };
+                default: return { text: 'Diterima', color: 'bg-slate-500/20 text-slate-300' };
             }
-        }
+        };
 
-        function listenForComplaints() {
-            onSnapshot(complaintsCollection, (snapshot) => {
-                complaints = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // Sort by creation date, newest first
-                complaints.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                
-                if (currentUser) {
-                    if (currentUser.role === 'admin') {
-                        renderAdminComplaints();
-                    } else {
-                        renderStudentComplaints();
-                    }
-                }
-            });
-        }
-
-        // --- UI & THEME FUNCTIONS --- (same as before)
-        function populateClassDropdowns() {
-            [studentClassDropdown, loginClassDropdown].forEach(dropdown => {
-                if (dropdown.options.length <= 1) {
-                    const grades = ['X', 'XI', 'XII']; const classes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-                    grades.forEach(grade => { classes.forEach(cls => { const option = document.createElement('option'); const className = `${grade}-${cls}`; option.value = className; option.textContent = className; dropdown.appendChild(option.cloneNode(true)); }); });
-                }
-            });
-        }
-        function applyTheme(bgColor, headerColor, titleColor, save = true) {
-            if (bgColor) body.style.backgroundColor = bgColor;
-            document.querySelectorAll('.dynamic-header').forEach(el => { if (headerColor) el.style.backgroundColor = headerColor; });
-            document.querySelectorAll('.dynamic-title-color').forEach(el => { if (titleColor) el.style.color = titleColor; });
-            if (bgColor === '#2d3748') { body.classList.add('text-gray-200'); body.classList.remove('text-gray-800'); } else { body.classList.add('text-gray-800'); body.classList.remove('text-gray-200'); }
-            if (save) { localStorage.setItem('theme', JSON.stringify({ bg: bgColor, header: headerColor, title: titleColor })); }
-        }
-        function loadThemePreference() {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) { const { bg, header, title } = JSON.parse(savedTheme); applyTheme(bg, header, title, false); }
-            else { applyTheme('#f3f4f6', '#ffffff', '#2563eb', false); }
-        }
-        function toggleSettingsPanel() { backgroundChanger.classList.toggle('hidden'); }
-        function showNotification(message, isSuccess = true) {
-            notificationMessage.textContent = message;
-            notification.className = `notification fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-xl opacity-0 transform translate-y-10 ${isSuccess ? 'bg-green-500' : 'bg-red-500'}`;
-            setTimeout(() => { notification.classList.remove('opacity-0', 'translate-y-10'); }, 10);
-            setTimeout(() => { notification.classList.add('opacity-0', 'translate-y-10'); }, 3000);
-        }
-        function playWelcomeAnimation(callback) {
-            welcomeOverlay.classList.remove('hidden');
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast-container');
+            toast.textContent = message;
+            toast.className = `toast show ${type}`;
             setTimeout(() => {
-                welcomeOverlay.classList.add('opacity-100');
-                setTimeout(() => {
-                    welcomeOverlay.classList.remove('opacity-100');
-                    welcomeOverlay.classList.add('hidden');
-                    if (callback) callback();
-                }, 2500);
-            }, 10);
+                toast.classList.remove('show');
+            }, 3000);
         }
+        
+        // --- PAGE NAVIGATION ---
         function showPage(pageId) {
-            Object.values(pages).forEach(page => page.classList.add('hidden'));
-            pages[pageId].classList.remove('hidden');
-            if (pageId === 'login') {
-                body.classList.add('login-background');
-                document.querySelectorAll('.dynamic-header, .dynamic-title-color').forEach(el => el.style.backgroundColor = el.style.color = '');
-                body.style.backgroundColor = '';
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            if (pageId === 'riwayat-siswa') renderStudentHistory();
+            if (pageId === 'admin-dashboard') renderAdminDashboard();
+            if (pageId === 'grafik') updateChart();
+            if (pageId === 'pengaturan') loadProfile();
+        }
+
+        function showComplaintForm(category) {
+            showPage('form-laporan');
+            document.getElementById('form-category-title').textContent = category;
+            document.getElementById('category-input').value = category;
+            document.getElementById('complaint-form').reset();
+        }
+
+        // --- ROLE & AUTHENTICATION ---
+        function handleLogin(event) {
+            event.preventDefault();
+            const userId = document.getElementById('user-id').value;
+            const password = document.getElementById('password').value;
+            const loginError = document.getElementById('login-error');
+
+            const foundUser = [...users.students, ...users.admins].find(user => user.id === userId && user.password === password);
+
+            if (foundUser) {
+                currentUser = foundUser;
+                loginError.classList.add('hidden');
+                document.getElementById('login-form').reset();
+                initializeAppUI(currentUser);
             } else {
-                body.classList.remove('login-background');
-                loadThemePreference();
+                loginError.textContent = 'NIS/ID atau password salah.';
+                loginError.classList.remove('hidden');
             }
         }
 
-        // --- RENDER FUNCTIONS ---
-        function getStatusBadge(status) {
-            const icons = {
-                'Diproses': `<svg class="w-4 h-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
-                'Selesai': `<svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-            };
-            const colors = { 'Diproses': 'bg-yellow-100 text-yellow-800', 'Selesai': 'bg-green-100 text-green-800' };
-            return `<span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full ${colors[status] || 'bg-gray-100 text-gray-800'}">${icons[status] || ''}${status}</span>`;
-        }
-
-        function renderStudentComplaints() {
-            if (!currentUser) return;
-            const userComplaints = complaints.filter(c => c.student === currentUser.username);
-            studentComplaintsList.innerHTML = userComplaints.length === 0 ? '<p class="text-gray-500 text-center">Anda belum memiliki pengaduan.</p>' : userComplaints.map(c => `<div class="complaint-card border border-gray-200 p-4 rounded-lg" data-id="${c.id}"><div class="flex justify-between items-start"><div><h3 class="font-semibold text-lg">${c.title} ${c.isAnonymous ? '<span class="text-sm font-normal text-gray-500">(Anonim)</span>' : ''}</h3><p class="text-sm text-gray-500 mb-2">Dikirim pada: ${new Date(c.createdAt?.seconds * 1000).toLocaleDateString('id-ID')}</p></div>${getStatusBadge(c.status)}</div></div>`).join('');
+        function initializeAppUI(user) {
+            document.getElementById('app-header').classList.remove('hidden');
+            document.getElementById('welcome-message').textContent = `Selamat datang, ${user.name}!`;
+            setupNavbar();
+            if (user.role === 'siswa') {
+                showPage('beranda-siswa');
+            } else {
+                setupAdminFilters();
+                showPage('admin-dashboard');
+            }
         }
         
-        function renderAdminComplaints() {
-            const inProgressComplaints = complaints.filter(c => c.status !== 'Selesai');
-            const completedComplaints = complaints.filter(c => c.status === 'Selesai');
-            const renderCard = (c) => `<div class="complaint-card border border-gray-200 p-4 rounded-lg" data-id="${c.id}"><div class="flex justify-between items-start mb-2"><h3 class="font-semibold text-lg">${c.title}</h3>${getStatusBadge(c.status)}</div><p class="text-sm text-gray-500">Pelapor: <span class="font-medium">${c.isAnonymous ? 'Anonim' : `${c.fullName} (${c.studentClass})`}</span></p></div>`;
-            adminInProgressList.innerHTML = inProgressComplaints.length === 0 ? '<p class="text-gray-500 text-center">Tidak ada pengaduan yang perlu ditindaklanjuti.</p>' : inProgressComplaints.map(renderCard).join('');
-            adminCompletedList.innerHTML = completedComplaints.length === 0 ? '<p class="text-gray-500 text-center">Belum ada pengaduan yang selesai ditangani.</p>' : completedComplaints.map(renderCard).join('');
+        function logout() {
+            currentUser = null;
+            document.getElementById('app-header').classList.add('hidden');
+            showPage('login');
         }
 
-        function renderMessages(messages) {
-             messages.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-            messagesContainer.innerHTML = messages.map(msg => {
-                const isAdmin = msg.sender === 'admin';
-                return `<div class="flex ${isAdmin ? 'justify-end' : 'justify-start'}"><div class="max-w-xs md:max-w-md px-4 py-2 rounded-xl ${isAdmin ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}"><p class="text-sm">${msg.text}</p><p class="text-xs ${isAdmin ? 'text-blue-200' : 'text-gray-500'} text-right mt-1">${new Date(msg.timestamp?.seconds * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p></div></div>`;
-            }).join('');
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-
-        function showComplaintDetail(complaintId) {
-            currentViewedComplaintId = complaintId;
-            const complaint = complaints.find(c => c.id === complaintId);
-            if (!complaint) return;
-
-            detailTitle.textContent = `Laporan #${complaint.id.substring(0,5)}...`;
-            detailSubTitle.textContent = complaint.title;
-            detailReporter.textContent = complaint.isAnonymous && currentUser.role === 'admin' ? 'Anonim' : `${complaint.fullName} (${complaint.studentClass})`;
-            detailDate.textContent = new Date(complaint.createdAt.seconds * 1000).toLocaleDateString('id-ID');
-            detailBody.textContent = complaint.body;
-            detailStatusBadge.innerHTML = getStatusBadge(complaint.status);
-            
-            renderMessages(complaint.messages || []);
-            
-            const isSelesai = complaint.status === 'Selesai';
-            messageForm.classList.toggle('hidden', isSelesai);
-            closedMessage.classList.toggle('hidden', !isSelesai);
-
-            if (currentUser.role === 'admin' && complaint.status !== 'Selesai') {
-                markAsCompleteBtn.classList.remove('hidden');
-            } else {
-                markAsCompleteBtn.classList.add('hidden');
+        function setupNavbar() {
+            const nav = document.getElementById('app-nav');
+            const settingsBtn = document.getElementById('pengaturan-btn');
+            nav.innerHTML = '';
+            if (currentUser.role === 'siswa') {
+                nav.innerHTML = `<div class="flex space-x-2 md:space-x-4">
+                    <button onclick="showPage('beranda-siswa')" class="nav-button text-slate-300 hover:text-white font-medium p-2 rounded-md hover:bg-slate-700 transition-colors">Beranda</button>
+                    <button onclick="showPage('riwayat-siswa')" class="nav-button text-slate-300 hover:text-white font-medium p-2 rounded-md hover:bg-slate-700 transition-colors">Riwayat</button>
+                    <button onclick="showPage('grafik')" class="nav-button text-slate-300 hover:text-white font-medium p-2 rounded-md hover:bg-slate-700 transition-colors">Grafik</button>
+                </div>`;
+                settingsBtn.style.display = 'block';
+            } else if (currentUser.role === 'admin') {
+                nav.innerHTML = `<div class="flex space-x-2 md:space-x-4">
+                    <button onclick="showPage('admin-dashboard')" class="nav-button text-slate-300 hover:text-white font-medium p-2 rounded-md hover:bg-slate-700 transition-colors">Dasbor</button>
+                    <button onclick="showPage('grafik')" class="nav-button text-slate-300 hover:text-white font-medium p-2 rounded-md hover:bg-slate-700 transition-colors">Grafik</button>
+                </div>`;
+                settingsBtn.style.display = 'none';
             }
-            showPage('detail');
         }
 
-        function handleComplaintCardClick(e) {
-            const card = e.target.closest('.complaint-card');
-            if (card) { showComplaintDetail(card.dataset.id); }
-        }
+        // --- DATA HANDLING (localStorage) ---
+        function getComplaints() { return JSON.parse(localStorage.getItem('complaints_v2')) || []; }
+        function saveComplaints(complaints) { localStorage.setItem('complaints_v2', JSON.stringify(complaints)); }
 
-        function logout() { currentUser = null; loginForm.reset(); showPage('login'); showNotification('Anda berhasil logout.'); }
-
-        // --- EVENT LISTENERS ---
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const role = document.querySelector('input[name="role"]:checked').value;
+        // --- FORM SUBMISSION ---
+        function submitComplaint(event) {
+            event.preventDefault();
+            const complaints = getComplaints();
+            const attachmentFile = document.getElementById('attachment').files[0];
             
-            // SECURITY CHECK: Siswa tidak bisa login sebagai admin
-            if (role === 'siswa' && username.toLowerCase() === 'admin') {
-                return showNotification('Nama pengguna "admin" hanya untuk peran admin.', false);
-            }
-             if (role === 'siswa' && !loginClassDropdown.value) {
-                return showNotification('Harap pilih kelas Anda.', false);
-            }
-
-            playWelcomeAnimation(() => {
-                if (role === 'admin' && username.toLowerCase() === 'admin') {
-                    currentUser = { role: 'admin', username: 'Admin' };
-                    renderAdminComplaints(); showPage('admin');
-                } else if (role === 'siswa') {
-                    currentUser = { role: 'siswa', username: username };
-                    studentName.textContent = username; studentInitial.textContent = username.charAt(0).toUpperCase();
-                    renderStudentComplaints(); showPage('student');
-                } else { showNotification('Username atau peran tidak valid.', false); }
-            });
-        });
-        
-        complaintForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
             const newComplaint = {
-                student: currentUser.username, fullName: document.getElementById('fullName').value,
-                studentClass: document.getElementById('studentClass').value, title: document.getElementById('complaintTitle').value,
-                body: document.getElementById('complaintBody').value, status: 'Diproses', isAnonymous: document.getElementById('isAnonymous').checked,
-                createdAt: serverTimestamp(), messages: []
+                id: Date.now(),
+                reporterId: currentUser.id,
+                category: document.getElementById('category-input').value,
+                problem: document.getElementById('masalah').value,
+                attachmentName: attachmentFile ? attachmentFile.name : null,
+                isAnonymous: document.getElementById('anonim').checked,
+                reporterName: document.getElementById('anonim').checked ? 'Anonim' : currentUser.name,
+                date: new Date().toISOString(),
+                status: 'Diterima',
+                followUp: 'Laporan Anda telah kami terima dan akan segera ditindaklanjuti.',
+                followUpAttachmentName: null // Initialize admin attachment
             };
-            try {
-                await addDoc(complaintsCollection, newComplaint);
-                complaintForm.reset(); showPage('student');
-                showNotification('Laporan berhasil dikirim dan sedang diproses!');
-            } catch (error) {
-                console.error("Error adding document: ", error);
-                showNotification("Gagal mengirim laporan.", false);
-            }
-        });
 
-        messageForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const text = messageInput.value.trim();
-            if (!text || !currentViewedComplaintId) return;
-            
-            const complaintRef = doc(db, complaintsCollection.path, currentViewedComplaintId);
-            const complaint = complaints.find(c => c.id === currentViewedComplaintId);
-            
-            const newMessage = { sender: currentUser.role, text: text, timestamp: new Date() };
-            const updatedMessages = [...(complaint.messages || []), newMessage];
+            complaints.unshift(newComplaint);
+            saveComplaints(complaints);
+            showToast('Laporan berhasil dikirim!');
+            showPage('beranda-siswa');
+        }
 
-            try {
-                await updateDoc(complaintRef, { messages: updatedMessages });
-                messageInput.value = '';
-                // The onSnapshot listener will handle re-rendering
-            } catch (error) {
-                console.error("Error updating messages: ", error);
-                showNotification("Gagal mengirim pesan.", false);
-            }
-        });
-
-        markAsCompleteBtn.addEventListener('click', async () => {
-            if (!currentViewedComplaintId || currentUser.role !== 'admin') return;
-            const complaintRef = doc(db, complaintsCollection.path, currentViewedComplaintId);
-            const complaint = complaints.find(c => c.id === currentViewedComplaintId);
-            const systemMessage = { sender: 'admin', text: 'Laporan ini telah ditandai sebagai Selesai oleh admin.', timestamp: new Date() };
-            const updatedMessages = [...(complaint.messages || []), systemMessage];
-            try {
-                await updateDoc(complaintRef, { status: 'Selesai', messages: updatedMessages });
-                showNotification(`Laporan ditandai sebagai Selesai.`);
-                currentViewedComplaintId = null;
-                showPage('admin');
-            } catch (error) {
-                console.error("Error marking as complete: ", error);
-                showNotification("Gagal mengubah status.", false);
-            }
-        });
+        // --- DYNAMIC CONTENT RENDERING ---
+        function renderCategoryButtons() {
+            const container = document.getElementById('category-buttons');
+            container.innerHTML = '';
+            categories.forEach(cat => {
+                const button = document.createElement('button');
+                button.className = 'category-card bg-slate-800 p-4 rounded-xl shadow-lg hover:bg-slate-700 hover:scale-105 transition-all duration-300 text-center flex flex-col items-center justify-center space-y-2';
+                button.onclick = () => showComplaintForm(cat.name);
+                button.innerHTML = `
+                    <div class="text-blue-400">${cat.icon}</div>
+                    <p class="font-semibold text-base text-white">${cat.name}</p>`;
+                container.appendChild(button);
+            });
+        }
         
-        // --- Other Listeners ---
-        document.querySelectorAll('input[name="role"]').forEach(radio => radio.addEventListener('change', (e) => loginClassContainer.style.display = e.target.value === 'siswa' ? 'block' : 'none'));
-        [document.getElementById('logoutBtnStudent'), document.getElementById('logoutBtnAdmin')].forEach(btn => btn.addEventListener('click', logout));
-        [settingsBtnStudent, settingsBtnAdmin].forEach(btn => btn.addEventListener('click', toggleSettingsPanel));
-        document.getElementById('newComplaintBtn').addEventListener('click', () => showPage('form'));
-        document.getElementById('backToStudentDashboard').addEventListener('click', () => { renderStudentComplaints(); showPage('student'); });
-        backToDashboardBtn.addEventListener('click', () => {
-            currentViewedComplaintId = null;
-            if (currentUser.role === 'admin') { showPage('admin'); }
-            else { showPage('student'); }
-        });
-        backgroundChanger.addEventListener('click', (e) => { const button = e.target.closest('button'); if (button && button.dataset.color) { applyTheme(button.dataset.color, button.dataset.header, button.dataset.titleColor); } });
-        [studentComplaintsList, adminInProgressList, adminCompletedList].forEach(list => list.addEventListener('click', handleComplaintCardClick));
+        function setupAdminFilters() {
+            const filterCategory = document.getElementById('filter-category');
+            filterCategory.innerHTML = '<option value="">Semua Kategori</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                filterCategory.appendChild(option);
+            });
+        }
+
+        function renderAdminStats(complaints) {
+            const container = document.getElementById('admin-stats');
+            const total = complaints.length;
+            const diproses = complaints.filter(c => c.status === 'Diproses').length;
+            const selesai = complaints.filter(c => c.status === 'Selesai').length;
+
+            container.innerHTML = `
+                <div class="bg-slate-900/50 p-4 rounded-lg"><p class="text-sm text-slate-400">Total Laporan</p><p class="text-2xl font-bold">${total}</p></div>
+                <div class="bg-slate-900/50 p-4 rounded-lg"><p class="text-sm text-slate-400">Laporan Diproses</p><p class="text-2xl font-bold">${diproses}</p></div>
+                <div class="bg-slate-900/50 p-4 rounded-lg"><p class="text-sm text-slate-400">Laporan Selesai</p><p class="text-2xl font-bold">${selesai}</p></div>
+            `;
+        }
+
+
+        function renderStudentHistory() {
+            const historyList = document.getElementById('history-list');
+            const allComplaints = getComplaints();
+            const myComplaints = allComplaints.filter(c => c.reporterId === currentUser.id);
+            historyList.innerHTML = '';
+
+            if (myComplaints.length === 0) {
+                historyList.innerHTML = `<p class="text-center text-slate-400">Anda belum membuat laporan.</p>`;
+                return;
+            }
+
+            myComplaints.forEach(item => {
+                const status = getStatusInfo(item.status);
+                const itemDate = new Date(item.date);
+                const formattedDate = itemDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) + ', ' + itemDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+                const element = document.createElement('div');
+                element.className = 'border border-slate-700 p-4 rounded-lg transition-all hover:border-slate-600';
+                element.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-bold text-slate-100">${item.category}</p>
+                            <p class="text-xs text-slate-400">Dikirim pada: ${formattedDate}</p>
+                        </div>
+                        <span class="text-xs font-medium px-2.5 py-0.5 rounded-full ${status.color}">${status.text}</span>
+                    </div>
+                    <p class="text-slate-300 mb-3">${item.problem}</p>
+                    ${item.attachmentName ? `<div class="text-xs text-slate-400 mb-3 flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg><span>${item.attachmentName}</span></div>` : ''}
+                    <div class="bg-slate-700/50 border-t border-slate-700 p-3 mt-3 rounded-b-lg">
+                        <p class="text-sm font-semibold text-slate-200">Tindak Lanjut Sekolah:</p>
+                        <p class="text-sm text-slate-300 italic mt-1">${item.followUp}</p>
+                        ${item.followUpAttachmentName ? `<div class="mt-2 text-xs text-slate-400 flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg><span>Lampiran Admin: ${item.followUpAttachmentName}</span></div>` : ''}
+                    </div>`;
+                historyList.appendChild(element);
+            });
+        }
+
+        function renderAdminDashboard() {
+            const adminList = document.getElementById('admin-history-list');
+            let complaints = getComplaints();
+
+            // Apply filters
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filterCategory = document.getElementById('filter-category').value;
+            const filterStatus = document.getElementById('filter-status').value;
+
+            if (searchTerm) {
+                complaints = complaints.filter(c => c.problem.toLowerCase().includes(searchTerm) || c.reporterName.toLowerCase().includes(searchTerm));
+            }
+            if (filterCategory) {
+                complaints = complaints.filter(c => c.category === filterCategory);
+            }
+            if (filterStatus) {
+                complaints = complaints.filter(c => c.status === filterStatus);
+            }
+
+            renderAdminStats(complaints); // Update stats based on filtered data
+
+            adminList.innerHTML = '';
+            if (complaints.length === 0) {
+                adminList.innerHTML = `<p class="text-center text-slate-400">Tidak ada laporan yang cocok dengan filter Anda.</p>`;
+                return;
+            }
+
+            complaints.forEach(item => {
+                const itemDate = new Date(item.date);
+                const formattedDate = itemDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+                const element = document.createElement('div');
+                element.className = 'border border-slate-700 p-4 rounded-lg';
+                element.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-bold text-slate-100">${item.category}</p>
+                            <p class="text-xs text-slate-400">Oleh: ${item.reporterName} • ${formattedDate}</p>
+                        </div>
+                        <select id="status-${item.id}" onchange="updateComplaint(${item.id})" class="text-xs font-medium bg-slate-700 border-slate-600 text-white rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Diterima" ${item.status === 'Diterima' ? 'selected' : ''}>Diterima</option>
+                            <option value="Diproses" ${item.status === 'Diproses' ? 'selected' : ''}>Diproses</option>
+                            <option value="Selesai" ${item.status === 'Selesai' ? 'selected' : ''}>Selesai</option>
+                        </select>
+                    </div>
+                    <p class="text-slate-300 mb-3">${item.problem}</p>
+                     ${item.attachmentName ? `<div class="text-xs text-slate-400 mb-3 flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg><span>${item.attachmentName}</span></div>` : ''}
+                    <div class="bg-slate-700/50 border-t border-slate-700 p-3 mt-3 rounded-b-lg">
+                        <label for="followup-${item.id}" class="text-sm font-semibold text-slate-200">Tindak Lanjut Sekolah:</label>
+                        <textarea id="followup-${item.id}" rows="2" class="w-full mt-1 p-2 text-sm bg-slate-700 border border-slate-600 text-white rounded-lg">${item.followUp}</textarea>
+                        <div class="mt-2">
+                            <label for="followup-attachment-${item.id}" class="text-xs font-medium text-slate-300">Lampirkan Foto Tindak Lanjut (Opsional)</label>
+                            <input type="file" id="followup-attachment-${item.id}" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-500/10 file:text-blue-300 hover:file:bg-blue-500/20">
+                            ${item.followUpAttachmentName ? `<div class="mt-2 text-xs text-slate-400 flex items-center space-x-1"><span>Lampiran saat ini: ${item.followUpAttachmentName}</span></div>` : ''}
+                        </div>
+                        <button onclick="updateComplaint(${item.id})" class="mt-2 px-4 py-1 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Simpan Tindak Lanjut</button>
+                    </div>`;
+                adminList.appendChild(element);
+            });
+        }
+
+        // --- CHART FUNCTIONS ---
+        function initializeChart() {
+            Chart.defaults.color = '#cbd5e1'; 
+            Chart.defaults.borderColor = '#475569';
+            const ctx = document.getElementById('complaintChart').getContext('2d');
+            const categoryNames = categories.map(c => c.name);
+            complaintChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categoryNames,
+                    datasets: [{
+                        label: 'Jumlah Laporan', data: getComplaintCounts(),
+                        backgroundColor: ['rgba(59, 130, 246, 0.6)', 'rgba(239, 68, 68, 0.6)', 'rgba(245, 158, 11, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(107, 114, 128, 0.6)'],
+                        borderColor: ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#6b7280'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
         
-        // --- APP INITIALIZATION ---
-        populateClassDropdowns();
-        initializeFirebase();
-        showPage('login');
+        function getComplaintCounts() {
+            const complaints = getComplaints();
+            const counts = {};
+            categories.forEach(cat => counts[cat.name] = 0);
+            complaints.forEach(c => { if(counts.hasOwnProperty(c.category)) { counts[c.category]++; } });
+            return Object.values(counts);
+        }
+
+        function updateChart() {
+            if (complaintChart) {
+                complaintChart.data.datasets[0].data = getComplaintCounts();
+                complaintChart.update();
+            }
+        }
+        
+        // --- ADMIN ACTIONS ---
+        function updateComplaint(id) {
+            const complaints = getComplaints();
+            const complaintIndex = complaints.findIndex(c => c.id === id);
+            if (complaintIndex > -1) {
+                const attachmentFile = document.getElementById(`followup-attachment-${id}`).files[0];
+                
+                complaints[complaintIndex].status = document.getElementById(`status-${id}`).value;
+                complaints[complaintIndex].followUp = document.getElementById(`followup-${id}`).value;
+                
+                if (attachmentFile) {
+                    complaints[complaintIndex].followUpAttachmentName = attachmentFile.name;
+                }
+
+                saveComplaints(complaints);
+                showToast('Laporan berhasil diperbarui!');
+                renderAdminDashboard(); // Re-render to reflect changes and keep filters
+            }
+        }
+
+        // --- PROFILE SETTINGS ---
+        function loadProfile() {
+            document.getElementById('nama-pengguna').value = currentUser.name;
+        }
+
+        function saveProfile() {
+            const newName = document.getElementById('nama-pengguna').value;
+            if (!newName.trim()) {
+                showToast('Nama tidak boleh kosong', 'error');
+                return;
+            }
+            currentUser.name = newName;
+            
+            const userInDb = users.students.find(u => u.id === currentUser.id) || users.admins.find(u => u.id === currentUser.id);
+            if (userInDb) userInDb.name = newName;
+            
+            document.getElementById('welcome-message').textContent = `Selamat datang, ${newName}!`;
+            showToast('Profil berhasil disimpan!');
+            showPage('beranda-siswa');
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategoryButtons();
+            initializeChart();
+            showPage('login');
+        });
     </script>
 </body>
 </html>
-
-
-      
 
